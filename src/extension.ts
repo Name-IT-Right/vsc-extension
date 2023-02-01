@@ -32,6 +32,13 @@ async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnost
 	for (const [key, value] of Object.entries(cloudFormationTemplate.Resources)) {
 		let resourceType = key;
 		let resource = value;
+		console.log("dasdas");
+
+		if (typeof(resourceType) !== 'string'){
+			return diagnostics;
+		}
+
+		console.log("dasd");
 
 		/*const dbEntry = database.find(schema => schema.typeName === resourceType)!;
 
