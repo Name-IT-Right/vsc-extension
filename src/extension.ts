@@ -2,7 +2,8 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { readFileSync } from 'fs';
-import { NamtITRightDataBase } from "./types";
+import { NameItRightDatabase } from "./types";
+import { join } from 'path';
 
 
 // Not perfect but should work for a lot of scenarios
@@ -24,19 +25,22 @@ async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnost
 	} catch(e) {
 		return diagnostics;
 	}
-
-	const database = JSON.parse(readFileSync("rules.json", "utf-8")) as NamtITRightDataBase;
-
+	const dbPath = join(__dirname, "database.json");
+	const database = JSON.parse(readFileSync(dbPath, "utf-8")) as NameItRightDatabase;
+	console.log(database);
 	
 	for (const [key, value] of Object.entries(cloudFormationTemplate.Resources)) {
 		let resourceType = key;
 		let resource = value;
-		const dbEntry = database.find(schema => schema.typeName === resourceType)!;
+
+		/*const dbEntry = database.find(schema => schema.typeName === resourceType)!;
+
+
 		if (dbEntry === undefined) { return diagnostics; }
 		const dbProperty = Object
 		.entries(dbEntry.properties)
-		.find(([propertyName, _]) => propertyName === resource.Type)?.[1];
-		if (dbProperty === undefined) { return diagnostics; }
+		.find(([propertyName, _]) => propertyName === resource)?.[1];
+		if (dbProperty === undefined) { return diagnostics; }*/
 
 	}
 
