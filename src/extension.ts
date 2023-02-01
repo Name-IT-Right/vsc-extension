@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { readFileSync } from 'fs';
+import { NamtITRightDataBase } from "./types";
 
 
 // Not perfect but should work for a lot of scenarios
@@ -22,13 +24,23 @@ async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnost
 	} catch(e) {
 		return diagnostics;
 	}
+
+	const database = JSON.parse(readFileSync("rules.json", "utf-8")) as NamtITRightDataBase;
+
 	
 	for (const [key, value] of Object.entries(cloudFormationTemplate.Resources)) {
 		let resourceType = key;
 		let resource = value;
+		const dbEntry = database.find(schema => schema.typeName === resourceType)!;
+		if (dbEntry === undefined) { return diagnostics; }
+		const dbProperty = Object
+		.entries(dbEntry.properties)
+		.find(([propertyName, _]) => propertyName === )?.[1]
+
 	}
 
-	
+
+
 	/////////////
 
 
