@@ -5,6 +5,8 @@ import { readFileSync } from 'fs';
 import { NameItRightDatabase } from "./types";
 import { join } from 'path';
 
+const dbPath = join(__dirname, "..", "src", "database.json");
+const database = JSON.parse(readFileSync(dbPath, "utf-8")) as NameItRightDatabase;
 
 // Not perfect but should work for a lot of scenarios
 async function shouldMark(cloudFormationTemplate: any, nameToCheck: string) {
@@ -14,22 +16,29 @@ async function shouldMark(cloudFormationTemplate: any, nameToCheck: string) {
 	return found === null;
 }
 
+const getParsedTemplate = (text: string) => {
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		throw "Unable to parse file";
+	}
+}
 
 async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
 	const text = doc.getText(); //Hold all of the document text in it. f.e. CF Template
 	const diagnostics = new Array<vscode.Diagnostic>();
+	const templateObject = getParsedTemplate(text);
 
-	let cloudFormationTemplate;
-	try {
-		cloudFormationTemplate = JSON.parse(text);
-	} catch(e) {
-		return diagnostics;
-	}
-	const dbPath = join(__dirname, "database.json");
-	const database = JSON.parse(readFileSync(dbPath, "utf-8")) as NameItRightDatabase;
-	console.log(database);
-	
-	for (const [key, value] of Object.entries(cloudFormationTemplate.Resources)) {
+	const howManyResourcesInText = (text.match(/"Resources"/g) || []).length;
+	console.log("howManyResourcesInText:", howManyResourcesInText)
+
+	const resourcesIndexInText = text.indexOf("\"Resources\":");
+	console.log("resourcesIndexInText:", resourcesIndexInText);
+
+	// const resourceKeys = Object.keys(templateObject.Resources);
+
+
+	for (const [key, value] of Object.entries(templateObject.Resources)) {
 		let resourceType = key;
 		let resource = value;
 		console.log("dasdas");
@@ -56,6 +65,7 @@ async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnost
 
 
 	const textArr: string[] = text.split(/\r\n|\n/); //Turn the text into array
+	
 	const indexOfBucket = textArr.findIndex((value: string) => new RegExp(`\s*"BucketName"`).test(value)) + 1;
 
 	if(indexOfBucket !== -1) {
@@ -93,7 +103,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const diagnosticCollection = vscode.languages.createDiagnosticCollection('types-installer');
 	
 	const handler = async (doc: vscode.TextDocument) => {
-		if(!doc.fileName.endsWith('static-website.json')) {
+		if(!doc.fileName.endsWith('.json')) {
 			return;
 		}
 	
