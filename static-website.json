@@ -1,0 +1,1134 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Static Website: combining S3, CloudFront and Route53, a cloudonaut.io template",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Parent Stacks"
+                    },
+                    "Parameters": [
+                        "ParentZoneStack",
+                        "ParentAlertStack",
+                        "ParentS3StackAccessLog",
+                        "ParentWAFStack"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Lambda@Edge Parameters"
+                    },
+                    "Parameters": [
+                        "ViewerRequestLambdaEdgeFunctionVersionARN",
+                        "OriginRequestLambdaEdgeFunctionVersionARN",
+                        "OriginResponseLambdaEdgeFunctionVersionARN",
+                        "ViewerResponseLambdaEdgeFunctionVersionARN"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "CloudFront Parameters"
+                    },
+                    "Parameters": [
+                        "DefaultRootObject",
+                        "DefaultErrorPagePath",
+                        "DefaultErrorResponseCode"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "DNS Parameters"
+                    },
+                    "Parameters": [
+                        "SubDomainNameWithDot",
+                        "EnableRedirectSubDomainName",
+                        "RedirectSubDomainNameWithDot"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "SSL/TLS Parameters"
+                    },
+                    "Parameters": [
+                        "CertificateType",
+                        "ExistingCertificate"
+                    ]
+                }
+            ]
+        }
+    },
+    "Parameters": {
+        "ParentZoneStack": {
+            "Description": "Stack name of parent zone stack based on vpc/zone-*.yaml template.",
+            "Type": "String"
+        },
+        "ParentAlertStack": {
+            "Description": "Optional but recommended stack name of parent alert stack based on operations/alert.yaml template.",
+            "Type": "String",
+            "Default": ""
+        },
+        "ParentS3StackAccessLog": {
+            "Description": "Optional stack name of parent s3 stack based on state/s3.yaml template (with Access set to ElbAccessLogWrite) to store access logs.",
+            "Type": "String",
+            "Default": ""
+        },
+        "ParentWAFStack": {
+            "Description": "Optional stack name of parent WAF stack based on the security/waf.yaml template.",
+            "Type": "String",
+            "Default": ""
+        },
+        "SubDomainNameWithDot": {
+            "Description": "Primary name that is used to create the DNS entry with trailing dot, e.g. \u00c2\u00a7{SubDomainNameWithDot}\u00c2\u00a7{HostedZoneName}. Leave blank for naked (or apex and bare) domain.",
+            "Type": "String",
+            "Default": "www."
+        },
+        "ViewerRequestLambdaEdgeFunctionVersionARN": {
+            "Description": "Optional version ARN of Lambda@Edge viewer request function (e.g., ViewerRequestLambdaEdgeFunctionVersionARN output of static-website/lambdaedge-index-document.yaml).",
+            "Type": "String",
+            "Default": ""
+        },
+        "OriginRequestLambdaEdgeFunctionVersionARN": {
+            "Description": "Optional version ARN of Lambda@Edge origin request function.",
+            "Type": "String",
+            "Default": ""
+        },
+        "OriginResponseLambdaEdgeFunctionVersionARN": {
+            "Description": "Optional version ARN of Lambda@Edge origin response function.",
+            "Type": "String",
+            "Default": ""
+        },
+        "ViewerResponseLambdaEdgeFunctionVersionARN": {
+            "Description": "Optional version ARN of Lambda@Edge viewer response function.",
+            "Type": "String",
+            "Default": ""
+        },
+        "DefaultRootObject": {
+            "Description": "Optional name of the index document for the website (e.g., index.html).",
+            "Type": "String",
+            "Default": "index.html"
+        },
+        "DefaultErrorPagePath": {
+            "Description": "Optional path of the error page for the website (e.g. /error.html).",
+            "Type": "String",
+            "Default": ""
+        },
+        "DefaultErrorResponseCode": {
+            "Description": "The HTTP status code that you want to return along with the error page (requires DefaultErrorPagePath).",
+            "Type": "String",
+            "Default": "404",
+            "AllowedValues": [
+                "200",
+                "404"
+            ]
+        },
+        "EnableRedirectSubDomainName": {
+            "Description": "Enable secondary name redirecting to the primary name defined in parameter SubDomainNameWithDot (requires template static-website/lambdaedge-index-document)?",
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues": [
+                "true",
+                "false"
+            ]
+        },
+        "RedirectSubDomainNameWithDot": {
+            "Description": "Optional secondary name redirecting to the primary name (requires EnableRedirectSubDomainName).",
+            "Type": "String",
+            "Default": ""
+        },
+        "CertificateType": {
+            "Description": "Indicates whether to use the certificate from the AWS Certificate Manager or AWS Identity and Access Management. CreateAcmCertificate only works in the us-east-1 region!",
+            "Type": "String",
+            "Default": "IamCertificateId",
+            "AllowedValues": [
+                "AcmCertificateArn",
+                "IamCertificateId",
+                "CreateAcmCertificate"
+            ]
+        },
+        "ExistingCertificate": {
+            "Description": "Optional ACM Certificate ARN or IAM Certificate ID. Certificate must be created in the us-east-1 region!",
+            "Type": "String",
+            "Default": ""
+        }
+    },
+    "Conditions": {
+        "HasS3Bucket": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ParentS3StackAccessLog"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasWAF": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ParentWAFStack"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasRedirectDomainName": {
+            "Fn::Equals": [
+                {
+                    "Ref": "EnableRedirectSubDomainName"
+                },
+                "true"
+            ]
+        },
+        "HasAcmCertificateArn": {
+            "Fn::Equals": [
+                {
+                    "Ref": "CertificateType"
+                },
+                "AcmCertificateArn"
+            ]
+        },
+        "HasIamCertificateId": {
+            "Fn::Equals": [
+                {
+                    "Ref": "CertificateType"
+                },
+                "IamCertificateId"
+            ]
+        },
+        "HasCreateAcmCertificate": {
+            "Fn::Equals": [
+                {
+                    "Ref": "CertificateType"
+                },
+                "CreateAcmCertificate"
+            ]
+        },
+        "HasViewerRequestLambdaEdgeFunctionVersionARN": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ViewerRequestLambdaEdgeFunctionVersionARN"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasOriginRequestLambdaEdgeFunctionVersionARN": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "OriginRequestLambdaEdgeFunctionVersionARN"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasOriginResponseLambdaEdgeFunctionVersionARN": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "OriginResponseLambdaEdgeFunctionVersionARN"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasViewerResponseLambdaEdgeFunctionVersionARN": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ViewerResponseLambdaEdgeFunctionVersionARN"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasDefaultRootObject": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "DefaultRootObject"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasDefaultErrorPagePath": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "DefaultErrorPagePath"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasAlertTopic": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ParentAlertStack"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasRegionNorthVirginia": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-east-1"
+            ]
+        },
+        "HasAlertTopicAndRegionNorthVirginia": {
+            "Fn::And": [
+                {
+                    "Condition": "HasAlertTopic"
+                },
+                {
+                    "Condition": "HasRegionNorthVirginia"
+                }
+            ]
+        }
+    },
+    "Resources": {
+        "Certificate": {
+            "Condition": "HasCreateAcmCertificate",
+            "Type": "AWS::CertificateManager::Certificate",
+            "Properties": {
+                "DomainName": {
+                    "Fn::Sub": [
+                        "${SubDomainNameWithDot}${HostedZoneName}",
+                        {
+                            "SubDomainNameWithDot": {
+                                "Ref": "SubDomainNameWithDot"
+                            },
+                            "HostedZoneName": {
+                                "Fn::ImportValue": {
+                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "DomainValidationOptions": {
+                    "Fn::If": [
+                        "HasRedirectDomainName",
+                        [
+                            {
+                                "DomainName": {
+                                    "Fn::Sub": [
+                                        "${SubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "SubDomainNameWithDot": {
+                                                "Ref": "SubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "HostedZoneId": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                                    }
+                                }
+                            },
+                            {
+                                "DomainName": {
+                                    "Fn::Sub": [
+                                        "${RedirectSubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "RedirectSubDomainNameWithDot": {
+                                                "Ref": "RedirectSubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "HostedZoneId": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                                    }
+                                }
+                            }
+                        ],
+                        [
+                            {
+                                "DomainName": {
+                                    "Fn::Sub": [
+                                        "${SubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "SubDomainNameWithDot": {
+                                                "Ref": "SubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "HostedZoneId": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                                    }
+                                }
+                            }
+                        ]
+                    ]
+                },
+                "SubjectAlternativeNames": {
+                    "Fn::If": [
+                        "HasRedirectDomainName",
+                        [
+                            {
+                                "Fn::Sub": [
+                                    "${RedirectSubDomainNameWithDot}${HostedZoneName}",
+                                    {
+                                        "RedirectSubDomainNameWithDot": {
+                                            "Ref": "RedirectSubDomainNameWithDot"
+                                        },
+                                        "HostedZoneName": {
+                                            "Fn::ImportValue": {
+                                                "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "ValidationMethod": "DNS"
+            }
+        },
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": "Bla Bla",
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                }
+            }
+        },
+        "S3BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {
+                    "Ref": "S3Bucket"
+                },
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "s3:GetObject",
+                            "Effect": "Allow",
+                            "Resource": {
+                                "Fn::Sub": "arn:aws:s3:::${S3Bucket}/*"
+                            },
+                            "Principal": {
+                                "CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "CloudFrontOriginAccessIdentity",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "Sid": "AllowSSLRequestsOnly",
+                            "Effect": "Deny",
+                            "Principal": "*",
+                            "Action": "s3:*",
+                            "Resource": [
+                                {
+                                    "Fn::GetAtt": [
+                                        "S3Bucket",
+                                        "Arn"
+                                    ]
+                                },
+                                {
+                                    "Fn::Sub": "${S3Bucket.Arn}/*"
+                                }
+                            ],
+                            "Condition": {
+                                "Bool": {
+                                    "aws:SecureTransport": false
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "CloudFrontOriginAccessIdentity": {
+            "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+            "Properties": {
+                "CloudFrontOriginAccessIdentityConfig": {
+                    "Comment": {
+                        "Fn::Sub": [
+                            "${SubDomainNameWithDot}${HostedZoneName}",
+                            {
+                                "SubDomainNameWithDot": {
+                                    "Ref": "SubDomainNameWithDot"
+                                },
+                                "HostedZoneName": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "CloudFrontDistribution": {
+            "Type": "AWS::CloudFront::Distribution",
+            "Properties": {
+                "DistributionConfig": {
+                    "Aliases": {
+                        "Fn::If": [
+                            "HasRedirectDomainName",
+                            [
+                                {
+                                    "Fn::Sub": [
+                                        "${SubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "SubDomainNameWithDot": {
+                                                "Ref": "SubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "Fn::Sub": [
+                                        "${RedirectSubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "RedirectSubDomainNameWithDot": {
+                                                "Ref": "RedirectSubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            [
+                                {
+                                    "Fn::Sub": [
+                                        "${SubDomainNameWithDot}${HostedZoneName}",
+                                        {
+                                            "SubDomainNameWithDot": {
+                                                "Ref": "SubDomainNameWithDot"
+                                            },
+                                            "HostedZoneName": {
+                                                "Fn::ImportValue": {
+                                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        ]
+                    },
+                    "Comment": {
+                        "Fn::Sub": [
+                            "${SubDomainNameWithDot}${HostedZoneName}",
+                            {
+                                "SubDomainNameWithDot": {
+                                    "Ref": "SubDomainNameWithDot"
+                                },
+                                "HostedZoneName": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "CustomErrorResponses": {
+                        "Fn::If": [
+                            "HasDefaultErrorPagePath",
+                            [
+                                {
+                                    "ErrorCode": 403,
+                                    "ResponseCode": {
+                                        "Ref": "DefaultErrorResponseCode"
+                                    },
+                                    "ResponsePagePath": {
+                                        "Ref": "DefaultErrorPagePath"
+                                    }
+                                }
+                            ],
+                            []
+                        ]
+                    },
+                    "DefaultCacheBehavior": {
+                        "AllowedMethods": [
+                            "GET",
+                            "HEAD",
+                            "OPTIONS"
+                        ],
+                        "CachedMethods": [
+                            "GET",
+                            "HEAD",
+                            "OPTIONS"
+                        ],
+                        "Compress": true,
+                        "DefaultTTL": 3600,
+                        "ForwardedValues": {
+                            "Cookies": {
+                                "Forward": "none"
+                            },
+                            "QueryString": false
+                        },
+                        "LambdaFunctionAssociations": [
+                            {
+                                "Fn::If": [
+                                    "HasViewerRequestLambdaEdgeFunctionVersionARN",
+                                    {
+                                        "EventType": "viewer-request",
+                                        "LambdaFunctionARN": {
+                                            "Ref": "ViewerRequestLambdaEdgeFunctionVersionARN"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasOriginRequestLambdaEdgeFunctionVersionARN",
+                                    {
+                                        "EventType": "origin-request",
+                                        "LambdaFunctionARN": {
+                                            "Ref": "OriginRequestLambdaEdgeFunctionVersionARN"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasOriginResponseLambdaEdgeFunctionVersionARN",
+                                    {
+                                        "EventType": "origin-response",
+                                        "LambdaFunctionARN": {
+                                            "Ref": "OriginResponseLambdaEdgeFunctionVersionARN"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasViewerResponseLambdaEdgeFunctionVersionARN",
+                                    {
+                                        "EventType": "viewer-response",
+                                        "LambdaFunctionARN": {
+                                            "Ref": "ViewerResponseLambdaEdgeFunctionVersionARN"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ],
+                        "MaxTTL": 86400,
+                        "MinTTL": 60,
+                        "TargetOriginId": "s3origin",
+                        "ViewerProtocolPolicy": "redirect-to-https"
+                    },
+                    "DefaultRootObject": {
+                        "Fn::If": [
+                            "HasDefaultRootObject",
+                            {
+                                "Ref": "DefaultRootObject"
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "Enabled": true,
+                    "HttpVersion": "http2and3",
+                    "IPV6Enabled": true,
+                    "Logging": {
+                        "Fn::If": [
+                            "HasS3Bucket",
+                            {
+                                "Bucket": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentS3StackAccessLog}-BucketDomainName"
+                                    }
+                                },
+                                "Prefix": {
+                                    "Ref": "AWS::StackName"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    "Origins": [
+                        {
+                            "DomainName": {
+                                "Fn::GetAtt": [
+                                    "S3Bucket",
+                                    "RegionalDomainName"
+                                ]
+                            },
+                            "Id": "s3origin",
+                            "S3OriginConfig": {
+                                "OriginAccessIdentity": {
+                                    "Fn::Sub": "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
+                                }
+                            }
+                        }
+                    ],
+                    "PriceClass": "PriceClass_All",
+                    "ViewerCertificate": {
+                        "AcmCertificateArn": {
+                            "Fn::If": [
+                                "HasCreateAcmCertificate",
+                                {
+                                    "Ref": "Certificate"
+                                },
+                                {
+                                    "Fn::If": [
+                                        "HasAcmCertificateArn",
+                                        {
+                                            "Ref": "ExistingCertificate"
+                                        },
+                                        {
+                                            "Ref": "AWS::NoValue"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "IamCertificateId": {
+                            "Fn::If": [
+                                "HasIamCertificateId",
+                                {
+                                    "Ref": "ExistingCertificate"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        },
+                        "MinimumProtocolVersion": "TLSv1.2_2019",
+                        "SslSupportMethod": "sni-only"
+                    },
+                    "WebACLId": {
+                        "Fn::If": [
+                            "HasWAF",
+                            {
+                                "Fn::ImportValue": {
+                                    "Fn::Sub": "${ParentWAFStack}-WebACL"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "Route53RecordV2": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                    }
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Sub": [
+                                "${SubDomainNameWithDot}${HostedZoneName}",
+                                {
+                                    "SubDomainNameWithDot": {
+                                        "Ref": "SubDomainNameWithDot"
+                                    },
+                                    "HostedZoneName": {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "Type": "A",
+                        "AliasTarget": {
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "DNSName": {
+                                "Fn::GetAtt": [
+                                    "CloudFrontDistribution",
+                                    "DomainName"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "Route53RecordIPv6": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                    }
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Sub": [
+                                "${SubDomainNameWithDot}${HostedZoneName}",
+                                {
+                                    "SubDomainNameWithDot": {
+                                        "Ref": "SubDomainNameWithDot"
+                                    },
+                                    "HostedZoneName": {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "Type": "AAAA",
+                        "AliasTarget": {
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "DNSName": {
+                                "Fn::GetAtt": [
+                                    "CloudFrontDistribution",
+                                    "DomainName"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "Route53RecordRedirectV2": {
+            "Condition": "HasRedirectDomainName",
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                    }
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Sub": [
+                                "${RedirectSubDomainNameWithDot}${HostedZoneName}",
+                                {
+                                    "RedirectSubDomainNameWithDot": {
+                                        "Ref": "RedirectSubDomainNameWithDot"
+                                    },
+                                    "HostedZoneName": {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "Type": "A",
+                        "AliasTarget": {
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "DNSName": {
+                                "Fn::GetAtt": [
+                                    "CloudFrontDistribution",
+                                    "DomainName"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "Route53RecordRedirectIPv6": {
+            "Condition": "HasRedirectDomainName",
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                    }
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Sub": [
+                                "${RedirectSubDomainNameWithDot}${HostedZoneName}",
+                                {
+                                    "RedirectSubDomainNameWithDot": {
+                                        "Ref": "RedirectSubDomainNameWithDot"
+                                    },
+                                    "HostedZoneName": {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "Type": "AAAA",
+                        "AliasTarget": {
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "DNSName": {
+                                "Fn::GetAtt": [
+                                    "CloudFrontDistribution",
+                                    "DomainName"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "LambdaExecutionErrorTooHighAlarm": {
+            "Condition": "HasAlertTopicAndRegionNorthVirginia",
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "AlarmDescription": "Lambde@Edge execution errors",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "Region",
+                        "Value": "Global"
+                    },
+                    {
+                        "Name": "DistributionId",
+                        "Value": {
+                            "Ref": "CloudFrontDistribution"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 1,
+                "MetricName": "LambdaExecutionError",
+                "Namespace": "AWS/CloudFront",
+                "OKActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "Period": 60,
+                "Statistic": "Sum",
+                "Threshold": 0,
+                "TreatMissingData": "notBreaching"
+            }
+        },
+        "LambdaValidationErrorTooHighAlarm": {
+            "Condition": "HasAlertTopicAndRegionNorthVirginia",
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "AlarmDescription": "Lambde@Edge invalid responses",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "Region",
+                        "Value": "Global"
+                    },
+                    {
+                        "Name": "DistributionId",
+                        "Value": {
+                            "Ref": "CloudFrontDistribution"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 1,
+                "MetricName": "LambdaValidationError",
+                "Namespace": "AWS/CloudFront",
+                "OKActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "Period": 60,
+                "Statistic": "Sum",
+                "Threshold": 0,
+                "TreatMissingData": "notBreaching"
+            }
+        },
+        "5xxErrorRateTooHighAlarm": {
+            "Condition": "HasAlertTopicAndRegionNorthVirginia",
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "AlarmDescription": "5xx errors",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "Region",
+                        "Value": "Global"
+                    },
+                    {
+                        "Name": "DistributionId",
+                        "Value": {
+                            "Ref": "CloudFrontDistribution"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 5,
+                "DatapointsToAlarm": 2,
+                "MetricName": "5xxErrorRate",
+                "Namespace": "AWS/CloudFront",
+                "OKActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "Period": 60,
+                "Statistic": "Average",
+                "Threshold": 1,
+                "TreatMissingData": "notBreaching"
+            }
+        }
+    },
+    "Outputs": {
+        "TemplateID": {
+            "Description": "cloudonaut.io template id.",
+            "Value": "static-website/static-website"
+        },
+        "TemplateVersion": {
+            "Description": "cloudonaut.io template version.",
+            "Value": "14.6.0"
+        },
+        "StackName": {
+            "Description": "Stack name.",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "BucketName": {
+            "Description": "Name of the S3 bucket storing the static files.",
+            "Value": {
+                "Ref": "S3Bucket"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BucketName"
+                }
+            }
+        },
+        "URL": {
+            "Description": "URL to static website.",
+            "Value": {
+                "Fn::Sub": [
+                    "https://${SubDomainNameWithDot}${HostedZoneName}",
+                    {
+                        "SubDomainNameWithDot": {
+                            "Ref": "SubDomainNameWithDot"
+                        },
+                        "HostedZoneName": {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                            }
+                        }
+                    }
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-URL"
+                }
+            }
+        },
+        "DistributionId": {
+            "Description": "CloudFront distribution id",
+            "Value": {
+                "Ref": "CloudFrontDistribution"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-DistributionId"
+                }
+            }
+        }
+    }
+}
