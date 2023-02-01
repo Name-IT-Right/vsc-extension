@@ -19,6 +19,7 @@ Will check your CloudFormation template for naming conventions.
 
 ## Requirements
 
+*** You should copy the `database.json` from the src folder to out folder.
 The CloudFormation file should be `json`
 
 
