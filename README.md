@@ -26,9 +26,8 @@ The CloudFormation file should be `json`
 
 * Working only with hardcoded file name: `static-website.json`
 * Showing error only for `BucketName`, doesn't depend on the actual value
-## Release Notes
 
-Users appreciate release notes as you update your extension.
+## Release Notes
 
 ### 0.0.1
 

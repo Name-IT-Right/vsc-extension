@@ -35,10 +35,10 @@ async function getDiagnostics(doc: vscode.TextDocument): Promise<vscode.Diagnost
 		if (dbEntry === undefined) { return diagnostics; }
 		const dbProperty = Object
 		.entries(dbEntry.properties)
-		.find(([propertyName, _]) => propertyName === )?.[1]
+		.find(([propertyName, _]) => propertyName === resource.Type)?.[1];
+		if (dbProperty === undefined) { return diagnostics; }
 
 	}
-
 
 
 	/////////////
