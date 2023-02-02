@@ -17,7 +17,7 @@
     "commands": [
       {
         "command": "nameconv.checkNaming",
-        "title": "Check Naming"
+        "title": "AWS Name IT Right: Check Naming"
       }
     ]
   },
