@@ -43,7 +43,7 @@ export const rulesNameItRight = {
             },
             {
               id: "NO_S3_ALIAS_ENDING_RULE",
-              regex: "(?!-s3alias$)",
+              regex: "^(?!.*-s3alias$).*$",
               errorMessage: "Bucket names must not end with the suffix -s3alias."
             }
           ],
