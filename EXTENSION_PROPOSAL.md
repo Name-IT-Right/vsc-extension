@@ -1,0 +1,4 @@
+- NameItRight is a public repo on Github
+- Users can fork the official Name IT Right repo and add their own rules (errors/warnings)
+- Users can override the default rule source in the extension's settings
+- User can merge upstream changes from the official repo with their fork if the Name IT Right repo is updated
