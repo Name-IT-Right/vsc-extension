@@ -2,7 +2,8 @@
   "name": "name-it-right-vsc-extension",
   "displayName": "AWS Name IT Right",
   "description": "",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "publisher": "Name IT Right Capstone Team",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -21,6 +22,7 @@
       }
     ]
   },
+  "pricing": "Free",
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
