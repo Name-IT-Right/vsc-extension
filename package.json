@@ -1,6 +1,8 @@
 {
   "name": "name-it-right-vsc-extension",
   "displayName": "AWS Name IT Right",
+  "icon": "logo.png",
+  "preview": true,
   "description": "",
   "version": "1.0.0",
   "publisher": "Name IT Right Capstone Team",
