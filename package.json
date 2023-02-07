@@ -1,9 +1,13 @@
 {
   "name": "name-it-right-vsc-extension",
   "displayName": "AWS Name IT Right",
+  "description": "AWS resource naming validation for humans",
   "icon": "logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.aws.dev/tech-u-aws-naming-capstone/vs-extension"
+  },
   "preview": true,
-  "description": "",
   "version": "1.0.0",
   "publisher": "Name IT Right Capstone Team",
   "engines": {

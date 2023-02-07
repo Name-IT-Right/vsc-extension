@@ -30,7 +30,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// Push all of the disposables that should be cleaned up when the extension is disabled
 	context.subscriptions.push(diagnosticCollection);
 	context.subscriptions.push(vscode.commands.registerCommand(command, handler));
-
 }
 
 // This method is called when your extension is deactivated
