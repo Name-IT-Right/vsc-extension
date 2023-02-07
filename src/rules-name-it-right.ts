@@ -54,7 +54,6 @@ export const rulesNameItRight = {
               errorMessage: "Buckets used with Amazon S3 Transfer Acceleration can't have dots (.) in their names."
             }
           ],
-
         },
       },
     }
