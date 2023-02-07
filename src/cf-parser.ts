@@ -1,6 +1,6 @@
 import { ParsingResult } from "./types";
 
-export const parseCfTemplateToGetStringLocations = (text: string) => {
+export const getStringLocations = (text: string) => {
   const results: ParsingResult[] = [];
   let inResources = false;
 
