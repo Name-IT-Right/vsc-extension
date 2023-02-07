@@ -86,6 +86,7 @@ export const parseCfTemplateToGetStringLocations = (text: string) => {
 
     if (isIdentifierBeingRead) {
       identifier = identifier + text[i];
+      continue;
     }
 
     if (isCharNumber(text[i]) && inPropertiesBase()) {
