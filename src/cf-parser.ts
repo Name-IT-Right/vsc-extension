@@ -67,9 +67,9 @@ export const parseCfTemplateToGetStringLocations = (text: string) => {
             propertyName: lastPropertyName,
             value: identifier,
             startLine: lineNumber,
-            startColumn: columnNumber - identifier.length,
+            startColumn: columnNumber - identifier.length - 1,
             endLine: lineNumber,
-            endColumn: columnNumber
+            endColumn: columnNumber - 1
           };
           inResources && results.push(result);
           continue;

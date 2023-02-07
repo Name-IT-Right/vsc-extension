@@ -1,6 +1,6 @@
 {
-  "name": "nameconv",
-  "displayName": "nameconv",
+  "name": "name-it-right-vsc-extension",
+  "displayName": "AWS Name IT Right",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -9,14 +9,14 @@
   "categories": [
     "Other"
   ],
+  "main": "./out/extension",
   "activationEvents": [
-    "onCommand:nameconv.checkNaming"
+    "onLanguage:json"
   ],
-  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "nameconv.checkNaming",
+        "command": "nameItRight.checkNaming",
         "title": "AWS Name IT Right: Check Naming"
       }
     ]
