@@ -3,18 +3,18 @@
 
 Visual Studio Code Extenstion to validate AWS Resource names in CloudFormation templates.
 
-<video src="screen_capture.mp4" controls style="max-height:50vh"></video>
+<video src="https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4" controls style="max-height:60vh;" ></video>
 
 ## Features
 
 ### Errors
-Get warned before deploying the template about the properties breaking AWS naming rules thanks to our curated, open-source registry. We check for **multiple rules** and provide **human-readable** errors.
+Get warned before deploying the template about the properties breaking AWS naming rules thanks to our curated, open-source registry. We support **multiple rules** per property and provide **human-readable** errors.
 
 ### Warnings
 Get insights about possible incompatibility between services when using certain names, without having to go through the documentation every time.
 
 ### CloudFormation Schema Registry
-To ensure completeness, we leverage naming rules from CloudFormation resource provider schemas if Name IT Right does not have information about the resource.
+To ensure completeness, we leverage naming rules from CloudFormation resource provider schemas if Name IT Right does not (yet) have information about the resource.
 
 ## Requirements and current limitations
 - Only JSON format of CloudFormation templates is supported.
