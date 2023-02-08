@@ -3,7 +3,8 @@
 
 Visual Studio Code Extenstion to validate AWS Resource names in CloudFormation templates.
 
-<video src="https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4" controls style="max-height:60vh;" ></video>
+<label for="video"><a href="https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4">See in action</a></label>
+<video id='video' src="https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4" controls style="max-height:60vh;" alt="See live: https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4" title="See live: https://d2v7vha21bdhr0.cloudfront.net/extension-wide.mp4"></video>
 
 ## Features
 
