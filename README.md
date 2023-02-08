@@ -21,3 +21,8 @@ To ensure completeness, we leverage naming rules from CloudFormation resource pr
 - Only JSON format of CloudFormation templates is supported.
 - Only hardcoded JSON strings are supported. The extension does not evaluate CloudFormation functions like `Fn::Sub`.
 - CloudFormation resource provider schemas may not be 100% accurate, as the resource availability may vary by region - [read more here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-type-schemas.html).
+
+## Building extension from source
+Make sure [Visual Studio Code Extension Manager (vsce)](https://github.com/microsoft/vscode-vsce#usage) is installed.
+
+You can build the `.vsix` package with `vsce package`. Finally, install it with from the context menu on the Extensions view by pointing to the newly created file.
