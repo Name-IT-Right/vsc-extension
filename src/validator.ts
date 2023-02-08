@@ -49,6 +49,7 @@ const getNameItRightDiagnostics = (location: ParsingResult, severity: Diagnostic
 				severity,
 				message: rule.errorMessage,
 				source: 'Name IT Right',
+				code: location.value,
 				range: new Range(location.startLine, location.startColumn, location.endLine, location.endColumn)
 			});
 		}
