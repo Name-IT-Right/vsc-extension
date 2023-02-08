@@ -1,28 +1,22 @@
-# Name IT Right
+# **Name IT Right VS Code Extension**
+*Stop taking the guess work out of naming your AWS resources!*
 
-Stop taking the guess work out of naming your AWS resources!
+Visual Studio Code Extenstion to validate AWS Resource names in CloudFormation templates.
 
-VS Code extenstion to validate AWS resource names from CloudFormation tempalates in a better way!
-
-## Customer Problem
-Current solutions are incomplete and it's hard to update the rules.
-With Name It Right, the rules can be much nore granular, and therefore easier to understand by humans.
+<video src="screen_capture.mp4" controls style="max-height:50vh"></video>
 
 ## Features
 
-### Name IT Right Errors
-Get information about resource naming compliance according to resource naming rules expressed in AWS documentation
+### Errors
+Get warned before deploying the template about the properties breaking AWS naming rules thanks to our curated, open-source registry. We check for **multiple rules** and provide **human-readable** errors.
 
-### Name It Right Warnings
-Get information about possible incompatibility between services when using certain names.
+### Warnings
+Get insights about possible incompatibility between services when using certain names, without having to go through the documentation every time.
 
 ### CloudFormation Schema Registry
-Get information about resource naming compliance with the rules used by CloudFormation Schema Registry.
+To ensure completeness, we leverage naming rules from CloudFormation resource provider schemas if Name IT Right does not have information about the resource.
 
-## Requirements
-
-- Your CloudFormation template must be in `JSON` format.
-
-## Known issues
-
-- The plugin works only with hardcoded string at the moment (no CF functions like `Fn::Sub` etc.)
+## Requirements and current limitations
+- Only JSON format of CloudFormation templates is supported.
+- Only hardcoded JSON strings are supported. The extension does not evaluate CloudFormation functions like `Fn::Sub`.
+- CloudFormation resource provider schemas may not be 100% accurate, as the resource availability may vary by region - [read more here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-type-schemas.html).
