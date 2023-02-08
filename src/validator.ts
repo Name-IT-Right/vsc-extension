@@ -14,7 +14,6 @@ const getDiagnostics = (locations: ParsingResult[]) => {
 }
 
 const getDiagnostic = (location: ParsingResult) => {
-	// console.log("getDiagnostic");
 	const diagnosticForLocation: Diagnostic[] = [];
 
 	// 1. Get NameItRight errors
