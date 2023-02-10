@@ -7,7 +7,7 @@ export const DB = {
                 "service_plain_english_name": "",
                 "list_rules_plain_english": ["User names can be a combination of up to 64 letters, digits, and these characters: plus (+), equal (=), comma (,), period (.), at sign (@), underscore (_), and hyphen (-). Names must be unique within an account. They are not distinguished by case. For example, you cannot create two users named TESTUSER and testuser."],
                 "list_custom_patterns": ["^[a-zA-Z0-9+=,\\.@_-]{1,64}"],
-                "list_documentation_urls": ["https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html?icmpid=docs_iam_console" , "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html"],
+                "list_documentation_urls": ["https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html?icmpid=docs_iam_console", "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html"],
                 "list_other_sources_urls": [],
                 "list_errors": [],
                 "name_change_possible": true
