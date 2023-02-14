@@ -22,7 +22,7 @@ const getDiagnostic = (location: ParsingResult) => {
   // 2. If Name It Right didn't yield any errors, try to get errors based on the patterns in the Schema Registry
   // TODO: implement Schema Registry checks
   // if (diagnosticForLocation.length === 0) {
-  // 	diagnosticForLocation.push(...getCFSchemaRegistryError(location));
+  // 	diagnosticForLocation.push(...getCFSchemaRegistryErrors(location));
   // }
 
   // 3. Get NameItRight warnings
